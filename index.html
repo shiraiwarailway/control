@@ -504,7 +504,8 @@
       if (!user) return;
       
       onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'directives'), (snapshot) => {
-        directivesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
+        // タイムスタンプの安全なソート処理に修正
+        directivesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
         if (!isInitialLoad.directives) processNewDocs(snapshot.docChanges(), 'directives');
         isInitialLoad.directives = false;
         
@@ -513,7 +514,7 @@
       });
 
       onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), (snapshot) => {
-        chatMessagesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.timestamp - b.timestamp);
+        chatMessagesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
         if (!isInitialLoad.messages) processNewDocs(snapshot.docChanges(), 'messages');
         isInitialLoad.messages = false;
 
@@ -522,7 +523,7 @@
       });
 
       onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'global_messages'), (snapshot) => {
-        globalChatMessagesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.timestamp - b.timestamp);
+        globalChatMessagesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
         if (!isInitialLoad.global) processNewDocs(snapshot.docChanges(), 'global');
         isInitialLoad.global = false;
 
@@ -591,7 +592,11 @@
       el.occTrainsGrid.innerHTML = trainsData.map(t => {
         const isSel = occSelectedTrainId === t.id && !occIsBroadcast;
         const conf = DIRECTIVE_TYPES[t.status] || DIRECTIVE_TYPES.info;
-        const crewStr = (t.crew.driver || t.crew.conductor) ? `<span class="bg-emerald-100 text-emerald-700 px-1.5 rounded text-[9px] font-bold">乗務中</span>` : '';
+        
+        // 過去のデータにcrew情報が無い場合のエラー回避
+        const crew = t.crew || {};
+        const crewStr = (crew.driver || crew.conductor) ? `<span class="bg-emerald-100 text-emerald-700 px-1.5 rounded text-[9px] font-bold">乗務中</span>` : '';
+        
         return `
           <button class="text-left relative border rounded-xl p-3 transition-all ${isSel ? 'ring-2 ring-blue-500 bg-blue-50/50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'}" onclick="window.selectTrain('${t.id}')">
             <div class="absolute left-0 top-0 bottom-0 w-1.5 ${t.color} rounded-l-xl"></div>
